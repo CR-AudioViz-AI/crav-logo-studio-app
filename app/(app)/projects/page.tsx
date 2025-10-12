@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, MoreVertical, Trash2, Copy, Share2, FolderOpen } from 'lucide-react';
+import { Plus, MoreVertical, Trash2, Copy, Share2, FolderOpen, Sparkles } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,11 +17,26 @@ import { useAppStore } from '@/lib/store';
 import { Project } from '@/lib/types';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 
 export default function ProjectsPage() {
   const { user } = useAppStore();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showAIDialog, setShowAIDialog] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [generating, setGenerating] = useState(false);
+  const [selectedLogos, setSelectedLogos] = useState<any[]>([]);
 
   useEffect(() => {
     if (user) {
@@ -46,7 +61,68 @@ export default function ProjectsPage() {
     }
   };
 
-  const createProject = async () => {
+  const generateLogos = async () => {
+    if (!aiPrompt.trim()) {
+      toast.error('Please describe the logo you want to create');
+      return;
+    }
+
+    setGenerating(true);
+    try {
+      const response = await fetch('/api/generate/logo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: aiPrompt, count: 4 }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to generate logos');
+      }
+
+      const { logos } = await response.json();
+      setSelectedLogos(logos);
+      toast.success('Logos generated! Select one to create a project.');
+    } catch (error: any) {
+      toast.error(error.message);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const createProjectFromLogo = async (logo: any) => {
+    try {
+      const { data, error } = await supabase
+        .from('projects')
+        .insert({
+          owner_id: user!.id,
+          title: aiPrompt.slice(0, 50) || `New Project ${projects.length + 1}`,
+          visibility: 'PRIVATE',
+          status: 'DRAFT',
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      await supabase.from('revisions').insert({
+        project_id: data.id,
+        svg: logo.svg,
+        editor_state: {},
+        notes: `Generated from prompt: ${aiPrompt}`,
+      });
+
+      toast.success('Project created!');
+      setShowAIDialog(false);
+      setAiPrompt('');
+      setSelectedLogos([]);
+      loadProjects();
+    } catch (error: any) {
+      toast.error('Failed to create project');
+    }
+  };
+
+  const createBlankProject = async () => {
     try {
       const { data, error } = await supabase
         .from('projects')
@@ -147,10 +223,16 @@ export default function ProjectsPage() {
           <h1 className="text-3xl font-bold">My Projects</h1>
           <p className="text-slate-600 mt-1">{projects.length} project{projects.length !== 1 ? 's' : ''}</p>
         </div>
-        <Button onClick={createProject} className="gap-2">
-          <Plus className="h-4 w-4" />
-          New Project
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={createBlankProject} variant="outline" className="gap-2">
+            <Plus className="h-4 w-4" />
+            Blank Project
+          </Button>
+          <Button onClick={() => setShowAIDialog(true)} className="gap-2">
+            <Sparkles className="h-4 w-4" />
+            Generate with AI
+          </Button>
+        </div>
       </div>
 
       {projects.length === 0 ? (
@@ -161,10 +243,16 @@ export default function ProjectsPage() {
             <p className="text-slate-600 mb-6">
               Create your first logo project to get started
             </p>
-            <Button onClick={createProject} className="gap-2">
-              <Plus className="h-4 w-4" />
-              Create Project
-            </Button>
+            <div className="flex gap-2 justify-center">
+              <Button onClick={createBlankProject} variant="outline" className="gap-2">
+                <Plus className="h-4 w-4" />
+                Blank Project
+              </Button>
+              <Button onClick={() => setShowAIDialog(true)} className="gap-2">
+                <Sparkles className="h-4 w-4" />
+                Generate with AI
+              </Button>
+            </div>
           </CardContent>
         </Card>
       ) : (
@@ -221,6 +309,81 @@ export default function ProjectsPage() {
           ))}
         </div>
       )}
+
+      <Dialog open={showAIDialog} onOpenChange={setShowAIDialog}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Generate Logo with AI</DialogTitle>
+            <DialogDescription>
+              Describe the logo you want to create and our AI will generate options for you.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="prompt">Describe your logo</Label>
+              <Textarea
+                id="prompt"
+                placeholder="Example: A modern tech company logo with a blue gradient, minimalist design, featuring a stylized rocket ship"
+                value={aiPrompt}
+                onChange={(e) => setAiPrompt(e.target.value)}
+                rows={4}
+                disabled={generating}
+              />
+            </div>
+
+            {selectedLogos.length === 0 ? (
+              <Button
+                onClick={generateLogos}
+                disabled={generating || !aiPrompt.trim()}
+                className="w-full gap-2"
+              >
+                {generating ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4" />
+                    Generate Logos (5 credits)
+                  </>
+                )}
+              </Button>
+            ) : (
+              <div className="space-y-4">
+                <div className="text-sm text-slate-600">
+                  Select a logo to create a project:
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  {selectedLogos.map((logo) => (
+                    <button
+                      key={logo.id}
+                      onClick={() => createProjectFromLogo(logo)}
+                      className="border-2 border-slate-200 rounded-lg p-4 hover:border-blue-500 transition-colors"
+                    >
+                      <div className="aspect-square bg-slate-50 rounded-lg flex items-center justify-center mb-2">
+                        <div dangerouslySetInnerHTML={{ __html: logo.svg }} className="w-full h-full" />
+                      </div>
+                      <div className="text-sm text-slate-600">Click to select</div>
+                    </button>
+                  ))}
+                </div>
+                <Button
+                  onClick={() => {
+                    setSelectedLogos([]);
+                    setAiPrompt('');
+                  }}
+                  variant="outline"
+                  className="w-full"
+                >
+                  Start Over
+                </Button>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
