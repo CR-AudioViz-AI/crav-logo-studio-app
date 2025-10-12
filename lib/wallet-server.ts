@@ -1,8 +1,6 @@
 import { createServerClient } from './supabase/server';
-import type { ReadonlyRequestCookies } from 'next/dist/server/web/spec-extension/adapters/request-cookies';
 
 export async function chargeCreditsOrThrow(
-  cookieStore: ReadonlyRequestCookies,
   userId: string,
   amount: number,
   reason: string,
@@ -10,7 +8,7 @@ export async function chargeCreditsOrThrow(
 ) {
   if (amount <= 0) throw new Error('Amount must be > 0');
 
-  const supabase = createServerClient(cookieStore);
+  const supabase = await createServerClient();
 
   const { data: wallet, error: walletError } = await supabase
     .from('wallets')
@@ -46,13 +44,12 @@ export async function chargeCreditsOrThrow(
 }
 
 export async function grantCredits(
-  cookieStore: ReadonlyRequestCookies,
   userId: string,
   amount: number,
   reason: string,
   meta?: any
 ) {
-  const supabase = createServerClient(cookieStore);
+  const supabase = await createServerClient();
 
   const { data: wallet, error: walletError } = await supabase
     .from('wallets')
@@ -84,8 +81,8 @@ export async function grantCredits(
   if (ledgerError) throw ledgerError;
 }
 
-export async function getCreditPrices(cookieStore: ReadonlyRequestCookies) {
-  const supabase = createServerClient(cookieStore);
+export async function getCreditPrices() {
+  const supabase = await createServerClient();
 
   const { data, error } = await supabase
     .from('settings')

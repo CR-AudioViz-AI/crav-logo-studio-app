@@ -1,8 +1,8 @@
 import { createServerClient as createSupabaseServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
-import { type ReadonlyRequestCookies } from 'next/dist/server/web/spec-extension/adapters/request-cookies';
 
-export function createServerClient(cookieStore: ReadonlyRequestCookies) {
+export async function createServerClient() {
+  const cookieStore = await cookies();
   return createSupabaseServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -28,4 +28,10 @@ export function createServerClient(cookieStore: ReadonlyRequestCookies) {
       },
     }
   );
+}
+
+export async function getServerUser() {
+  const supabase = await createServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  return user;
 }

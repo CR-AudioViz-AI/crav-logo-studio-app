@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { createServerClient } from '@/lib/supabase/server';
 import { grantCredits } from '@/lib/wallet-server';
 
@@ -10,8 +9,7 @@ export async function POST(req: NextRequest) {
     // TODO: Add proper PayPal webhook verification using transmission headers
     // and PAYPAL_WEBHOOK_ID in production
 
-    const cookieStore = cookies();
-    const supabase = createServerClient(cookieStore);
+    const supabase = await createServerClient();
 
     if (event.event_type === 'PAYMENT.CAPTURE.COMPLETED') {
       const resource = event.resource;
@@ -31,7 +29,6 @@ export async function POST(req: NextRequest) {
 
       if (skuData?.amount_credits) {
         await grantCredits(
-          cookieStore,
           userId,
           skuData.amount_credits,
           `PayPal: ${sku}`,

@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { createServerClient } from '@/lib/supabase/server';
 import { chargeCreditsOrThrow } from '@/lib/wallet-server';
 
@@ -15,15 +14,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Reason required' }, { status: 400 });
     }
 
-    const cookieStore = cookies();
-    const supabase = createServerClient(cookieStore);
+    const supabase = await createServerClient();
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    await chargeCreditsOrThrow(cookieStore, user.id, amount, reason, meta);
+    await chargeCreditsOrThrow(user.id, amount, reason, meta);
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

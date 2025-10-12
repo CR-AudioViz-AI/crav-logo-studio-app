@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { createServerClient } from '@/lib/supabase/server';
 import { grantCredits } from '@/lib/wallet-server';
 
@@ -15,8 +14,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Reason required' }, { status: 400 });
     }
 
-    const cookieStore = cookies();
-    const supabase = createServerClient(cookieStore);
+    const supabase = await createServerClient();
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
@@ -29,7 +27,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    await grantCredits(cookieStore, userId, amount, reason, meta);
+    await grantCredits(userId, amount, reason, meta);
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

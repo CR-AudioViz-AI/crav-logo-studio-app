@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { createServerClient } from '@/lib/supabase/server';
 import { chargeCreditsOrThrow, getCreditPrices } from '@/lib/wallet-server';
 
@@ -11,8 +10,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Prompt required' }, { status: 400 });
     }
 
-    const cookieStore = cookies();
-    const supabase = createServerClient(cookieStore);
+    const supabase = await createServerClient();
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
@@ -20,13 +18,12 @@ export async function POST(req: NextRequest) {
     }
 
     // Get credit cost from settings
-    const prices = await getCreditPrices(cookieStore);
+    const prices = await getCreditPrices();
     const creditCost = prices['logo.concept'] || 5;
 
     // Charge credits before generation
     try {
       await chargeCreditsOrThrow(
-        cookieStore,
         user.id,
         creditCost,
         'AI logo generation',

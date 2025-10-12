@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { createServerClient } from '@/lib/supabase/server';
 import { stripe, STRIPE_PRODUCTS } from '@/lib/stripe';
 
@@ -7,8 +6,7 @@ export async function POST(req: NextRequest) {
   try {
     const { productId } = await req.json();
 
-    const cookieStore = cookies();
-    const supabase = createServerClient(cookieStore);
+    const supabase = await createServerClient();
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
