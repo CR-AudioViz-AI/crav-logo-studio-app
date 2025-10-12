@@ -98,10 +98,23 @@ npm run lint       # Find linting issues
 npm run build      # Test build locally
 ```
 
+**Module not found errors in dev?**
+```bash
+# Stop your dev server (Ctrl+C or Cmd+C)
+# Then restart it:
+npm run dev
+```
+
 **Auth not working?**
 - Check Supabase URL and anon key are correct
 - Verify Supabase project is active
 - Check browser console for errors
+
+**Logo generation fails with "Module not found: @supabase/ssr"?**
+1. Stop the dev server
+2. Run: `npm install`
+3. Restart: `npm run dev`
+4. If on deployment platform, trigger a new deploy
 
 **Logo generation fails?**
 - Check user is authenticated
