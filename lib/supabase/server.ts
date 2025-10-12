@@ -1,9 +1,8 @@
-import { createServerClient as createSupabaseServerClient } from '@supabase/ssr';
+import { createServerClient as createSupabaseServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { type ReadonlyRequestCookies } from 'next/dist/server/web/spec-extension/adapters/request-cookies';
 
-export async function createServerClient() {
-  const cookieStore = await cookies();
-
+export function createServerClient(cookieStore: ReadonlyRequestCookies) {
   return createSupabaseServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -12,18 +11,18 @@ export async function createServerClient() {
         get(name: string) {
           return cookieStore.get(name)?.value;
         },
-        set(name: string, value: string, options: any) {
+        set(name: string, value: string, options: CookieOptions) {
           try {
-            cookieStore.set(name, value, options);
+            cookieStore.set({ name, value, ...options });
           } catch (error) {
-            // Handle error in route handlers
+            // Server component can't set cookies
           }
         },
-        remove(name: string, options: any) {
+        remove(name: string, options: CookieOptions) {
           try {
-            cookieStore.set(name, '', { ...options, maxAge: 0 });
+            cookieStore.set({ name, value: '', ...options });
           } catch (error) {
-            // Handle error in route handlers
+            // Server component can't remove cookies
           }
         },
       },

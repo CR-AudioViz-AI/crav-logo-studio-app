@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { headers } from 'next/headers';
+import { headers, cookies } from 'next/headers';
 import { createServerClient } from '@/lib/supabase/server';
 import { stripe } from '@/lib/stripe';
 
 export async function POST(req: NextRequest) {
   const body = await req.text();
-  const headersList = await headers();
-  const signature = headersList.get('stripe-signature');
+  const signature = headers().get('stripe-signature');
 
   if (!signature) {
     return NextResponse.json({ error: 'No signature' }, { status: 400 });
@@ -23,7 +22,8 @@ export async function POST(req: NextRequest) {
       process.env.STRIPE_WEBHOOK_SECRET || ''
     );
 
-    const supabase = await createServerClient();
+    const cookieStore = cookies();
+    const supabase = createServerClient(cookieStore);
 
     switch (event.type) {
       case 'checkout.session.completed': {
