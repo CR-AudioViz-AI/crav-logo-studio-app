@@ -5,7 +5,8 @@ import { stripe } from '@/lib/stripe';
 
 export async function POST(req: NextRequest) {
   const body = await req.text();
-  const signature = headers().get('stripe-signature');
+  const headersList = await headers();
+  const signature = headersList.get('stripe-signature');
 
   if (!signature) {
     return NextResponse.json({ error: 'No signature' }, { status: 400 });
@@ -22,7 +23,7 @@ export async function POST(req: NextRequest) {
       process.env.STRIPE_WEBHOOK_SECRET || ''
     );
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     switch (event.type) {
       case 'checkout.session.completed': {

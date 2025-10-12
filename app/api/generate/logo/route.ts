@@ -5,7 +5,7 @@ export async function POST(req: NextRequest) {
   try {
     const { prompt, style, count = 4 } = await req.json();
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
