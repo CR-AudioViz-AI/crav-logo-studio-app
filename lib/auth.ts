@@ -15,23 +15,22 @@ export async function signUp(email: string, password: string, name?: string) {
   if (error) throw error;
 
   if (data.user) {
-    await supabase.from('users').insert({
-      id: data.user.id,
-      email: data.user.email!,
-      name: name || null,
+    const response = await fetch('/api/auth/setup', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        userId: data.user.id,
+        email: data.user.email,
+        name: name || null,
+      }),
     });
 
-    await supabase.from('wallets').insert({
-      user_id: data.user.id,
-      balance: 50,
-    });
-
-    await supabase.from('ledger_entries').insert({
-      wallet_id: (await supabase.from('wallets').select('id').eq('user_id', data.user.id).single()).data!.id,
-      delta: 50,
-      description: 'Welcome bonus credits',
-      meta: { type: 'signup_bonus' },
-    });
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to setup user account');
+    }
   }
 
   return data;
