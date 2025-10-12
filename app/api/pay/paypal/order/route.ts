@@ -3,6 +3,9 @@ import { createServerClient } from '@/lib/supabase/server';
 import { paypalClient, isPayPalConfigured } from '@/lib/paypal';
 import paypal from '@paypal/checkout-server-sdk';
 
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 export async function POST(req: NextRequest) {
   try {
     if (!isPayPalConfigured()) {

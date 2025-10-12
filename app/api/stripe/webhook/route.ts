@@ -3,6 +3,9 @@ import { headers } from 'next/headers';
 import { createServerClient } from '@/lib/supabase/server';
 import { stripe } from '@/lib/stripe';
 
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 export async function POST(req: NextRequest) {
   const body = await req.text();
   const headersList = await headers();
