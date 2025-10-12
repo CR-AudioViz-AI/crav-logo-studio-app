@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@/lib/supabase/server';
+import { chargeCreditsOrThrow, getCreditPrices } from '@/lib/wallet-server';
 
 export async function POST(req: NextRequest) {
   try {
     const { prompt, style, count = 4 } = await req.json();
+
+    if (!prompt) {
+      return NextResponse.json({ error: 'Prompt required' }, { status: 400 });
+    }
 
     const cookieStore = cookies();
     const supabase = createServerClient(cookieStore);
@@ -14,28 +19,28 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { data: wallet } = await supabase
-      .from('wallets')
-      .select('balance')
-      .eq('user_id', user.id)
-      .single();
+    // Get credit cost from settings
+    const prices = await getCreditPrices(cookieStore);
+    const creditCost = prices['logo.concept'] || 5;
 
-    if (!wallet || wallet.balance < 5) {
-      return NextResponse.json({ error: 'Insufficient credits' }, { status: 402 });
+    // Charge credits before generation
+    try {
+      await chargeCreditsOrThrow(
+        cookieStore,
+        user.id,
+        creditCost,
+        'AI logo generation',
+        { prompt, style, count }
+      );
+    } catch (error: any) {
+      if (error.message === 'INSUFFICIENT_CREDITS') {
+        return NextResponse.json({ error: 'Insufficient credits' }, { status: 402 });
+      }
+      throw error;
     }
 
-    await supabase
-      .from('wallets')
-      .update({ balance: wallet.balance - 5 })
-      .eq('user_id', user.id);
-
-    await supabase.from('ledger_entries').insert({
-      wallet_id: (await supabase.from('wallets').select('id').eq('user_id', user.id).single()).data!.id,
-      delta: -5,
-      description: 'AI logo generation',
-      meta: { prompt, style, count },
-    });
-
+    // Generate placeholder logos
+    // TODO: Replace with actual AI generation when ready
     const logos = Array.from({ length: count }, (_, i) => ({
       id: `logo-${Date.now()}-${i}`,
       svg: generatePlaceholderSVG(prompt, i),
