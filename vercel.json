@@ -1,7 +1,12 @@
 {
-  "buildCommand": "npm run build",
-  "devCommand": "npm run dev",
-  "installCommand": "npm install",
-  "framework": "nextjs",
-  "outputDirectory": ".next"
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "github": {
+    "autoAlias": false,
+    "silent": true
+  },
+  "git": {
+    "deploymentEnabled": {
+      "main": false
+    }
+  }
 }
