@@ -28,7 +28,7 @@ export default function BillingPage() {
     try {
       const entries = await getLedgerEntries(user!.id);
       setLedger(entries);
-    } catch (error) {
+    } catch (error: unknown) {
       toast.error('Failed to load transaction history');
     } finally {
       setLoading(false);
