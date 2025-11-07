@@ -1,6 +1,7 @@
 import 'server-only';
 import { createServerClient as createSupabaseServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { getErrorMessage, logError, formatApiError } from '@/lib/utils/error-utils';
 
 export async function createServerClient() {
   const cookieStore = await cookies();
@@ -15,14 +16,14 @@ export async function createServerClient() {
         set(name: string, value: string, options: CookieOptions) {
           try {
             cookieStore.set({ name, value, ...options });
-          } catch (error) {
+          } catch (error: unknown) {
             // Server component can't set cookies
           }
         },
         remove(name: string, options: CookieOptions) {
           try {
             cookieStore.set({ name, value: '', ...options });
-          } catch (error) {
+          } catch (error: unknown) {
             // Server component can't remove cookies
           }
         },
